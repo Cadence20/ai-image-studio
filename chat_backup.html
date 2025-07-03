@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Chat Assistant</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      margin-top: 2rem;
+    }
+    .chat-box {
+      width: 90%;
+      max-width: 600px;
+      background: white;
+      border-radius: 10px;
+      padding: 1rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 400px;
+      margin-bottom: 1rem;
+    }
+    .message {
+      padding: 0.5rem;
+      margin: 0.5rem 0;
+      border-radius: 8px;
+      max-width: 80%;
+    }
+    .user {
+      background-color: #e0f0ff;
+      align-self: flex-end;
+    }
+    .assistant {
+      background-color: #f0f0f0;
+      align-self: flex-start;
+    }
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+    input {
+      flex: 1;
+      padding: 0.75rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .continue-btn {
+      margin-top: 1rem;
+      align-self: center;
+      background: #28a745;
+    }
+  </style>
+</head>
+<body>
+  <h1>AI Prompt Assistant</h1>
+  <div class="chat-box">
+    <div class="messages" id="messages"></div>
+    <div class="input-row">
+      <input type="text" id="userInput" placeholder="Refine or describe a new image..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+    <button class="continue-btn" onclick="continueToShopify()">Continue with this image</button>
+  </div>
+
+  <script>
+    const messages = [];
+    const messagesContainer = document.getElementById('messages');
+
+    function renderMessage(role, content) {
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+      div.textContent = content;
+      messagesContainer.appendChild(div);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('userInput');
+      const userText = input.value.trim();
+      if (!userText) return;
+
+      renderMessage('user', userText);
+      messages.push({ role: 'user', content: userText });
+      input.value = '';
+
+      try {
+        const res = await fetch('http://localhost:3001/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages })
+        });
+
+        const data = await res.json();
+        if (data.reply) {
+          messages.push({ role: 'assistant', content: data.reply });
+          renderMessage('assistant', data.reply);
+        } else {
+          renderMessage('assistant', '⚠️ No response from AI.');
+        }
+      } catch (err) {
+        console.error(err);
+        renderMessage('assistant', '❌ Error reaching AI.');
+      }
+    }
+
+    function continueToShopify() {
+      const finalPrompt = messages[messages.length - 1]?.content || '';
+      localStorage.setItem('finalPrompt', finalPrompt);
+
+      // Replace with your actual Shopify product URL
+      const shopifyProductURL = 'https://yourstore.myshopify.com/products/custom-shirt';
+
+      // Optionally pass the prompt as a query parameter
+      window.location.href = `${shopifyProductURL}?prompt=${encodeURIComponent(finalPrompt)}`;
+    }
+  </script>
+</body>
+</html>
