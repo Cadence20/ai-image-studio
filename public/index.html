@@ -200,10 +200,8 @@
       addMessage('user', prompt);
       input.value = '';
 
-      // Show avatar + "working on..." message
       addMessage('assistant', `Okay, working on: "${prompt}"`, true);
 
-      // Start progress bar
       progressContainer.style.display = 'block';
       let progress = 0;
       const interval = setInterval(() => {
@@ -213,34 +211,42 @@
         }
       }, 100);
 
-      // Generate image
-      const imageRes = await fetch('http://localhost:3001/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
+      const baseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:3001'
+        : 'https://ai-image-studio-so68.onrender.com';
 
-      clearInterval(interval);
-      updateProgressBar(100);
-      setTimeout(() => progressContainer.style.display = 'none', 500);
+      try {
+        const imageRes = await fetch(`${baseUrl}/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        });
 
-      const imageData = await imageRes.json();
-      if (imageData.imageUrl) {
-        const img = document.createElement('img');
-        img.src = imageData.imageUrl;
-        img.onload = () => img.classList.add('reveal');
-        imageResult.innerHTML = '';
-        imageResult.appendChild(img);
-        shopifyBtn.style.display = 'block';
+        clearInterval(interval);
+        updateProgressBar(100);
+        setTimeout(() => progressContainer.style.display = 'none', 500);
 
-        // Now assistant follows up
-        messages.push({ role: 'assistant', content: 'Is this close to what you wanted?' });
-        addMessage('assistant', 'Is this close to what you wanted?');
-      } else {
-        imageResult.innerHTML = '⚠️ Image generation failed.';
+        const imageData = await imageRes.json();
+        if (imageData.imageUrl) {
+          const img = document.createElement('img');
+          img.src = imageData.imageUrl;
+          img.onload = () => img.classList.add('reveal');
+          imageResult.innerHTML = '';
+          imageResult.appendChild(img);
+          shopifyBtn.style.display = 'block';
+
+          messages.push({ role: 'assistant', content: 'Is this close to what you wanted?' });
+          addMessage('assistant', 'Is this close to what you wanted?');
+        } else {
+          imageResult.innerHTML = '⚠️ Image generation failed.';
+        }
+      } catch (err) {
+        clearInterval(interval);
+        progressContainer.style.display = 'none';
+        imageResult.innerHTML = '❌ Error generating image.';
+        console.error('Fetch error:', err);
       }
 
-      // Update button label
       if (!hasGenerated) {
         generateBtn.textContent = 'Revise Image';
         hasGenerated = true;
